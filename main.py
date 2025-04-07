@@ -1,20 +1,16 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import fitz 
 import spacy
 import re
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 nlp = spacy.load("en_core_web_sm")
+model = SentenceTransformer("all-MiniLM-L6-v2")  # semantic embeddings
 
 
-# ## Extracting text from both resume and job description pdf
 
-# In[2]:
-
+## Extracting text from both resume and job description pdf
 
 def extract_text_from_pdf(pdf_file):
     try:
@@ -24,18 +20,12 @@ def extract_text_from_pdf(pdf_file):
         return f"Error reading PDF: {e}"
 
 
-# In[3]:
-
-
 def preprocess(text):
     text = text.lower()
     text = re.sub(r'\s+', ' ', text)  # Remove extra spaces/newlines
     doc = nlp(text)
     tokens = [token.lemma_ for token in doc if token.is_alpha and not token.is_stop]
     return " ".join(tokens)
-
-
-# In[4]:
 
 
 def extract_sections(text):
@@ -56,11 +46,11 @@ def extract_sections(text):
     return {k: " ".join(v) for k, v in sections.items()}
 
 
-# In[5]:
+def get_similarity(text1, text2):
+    emb1 = model.encode([text1])[0]
+    emb2 = model.encode([text2])[0]
+    return cosine_similarity([emb1], [emb2])[0][0]
 
-
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 
 def rate_resume_against_jd(resume_file, jd_file):
@@ -68,26 +58,25 @@ def rate_resume_against_jd(resume_file, jd_file):
     resume_text = extract_text_from_pdf(resume_file)
     jd_text = extract_text_from_pdf(jd_file)
 
+    if "Error" in resume_text or "Error" in jd_text:
+        return 0.0
+
     resume_clean = preprocess(resume_text)
     jd_clean = preprocess(jd_text)
 
-    # TF-IDF vectorization + similarity
-    vectorizer = TfidfVectorizer()
-    vectors = vectorizer.fit_transform([jd_clean, resume_clean])
-    similarity = cosine_similarity(vectors[0], vectors[1])[0][0]
+    # Get full-text similarity
+    base_score = get_similarity(jd_clean, resume_clean)
 
-    # Optional: boost based on structured sections
-    resume_sections = extract_sections(resume_text)
+    # Extract sections
+    sections = extract_sections(resume_text)
+    weights = {"skills": 0.4, "experience": 0.3, "education": 0.2}
     boost = 0
 
-    for section in ["skills", "experience", "education"]:
-        section_text = preprocess(resume_sections.get(section, ""))
+    for section, weight in weights.items():
+        section_text = preprocess(sections.get(section, ""))
         if section_text:
-            vecs = vectorizer.transform([jd_clean, section_text])
-            score = cosine_similarity(vecs[0], vecs[1])[0][0]
-            boost += score * 0.1  # small weighted bonus
-    
-    # Final score (scaled out of 10)
-    final_score = min((similarity + boost) * 10, 10)
-    return round(final_score, 2)
+            score = get_similarity(jd_clean, section_text)
+            boost += score * weight
 
+    final_score = min((base_score * 0.5 + boost) * 10, 10)
+    return round(final_score, 2)

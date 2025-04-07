@@ -1,7 +1,6 @@
 import streamlit as st
 
-import nbimporter
-from main import extract_resume_text, extract_jd_text, calculate_similarity_score, rate_resume_against_jd
+from main import rate_resume_against_jd
 
 
 st.title("Resume vs Job Description Matcher 🔍")
