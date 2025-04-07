@@ -3,7 +3,7 @@ import streamlit as st
 from main import rate_resume_against_jd
 
 
-st.title("Resume vs Job Description Matcher 🔍")
+st.title("Check your resume compatibility with any job description")
 
 resume_pdf = st.file_uploader("Upload Resume (PDF)", type="pdf")
 jd_pdf = st.file_uploader("Upload Job Description (PDF)", type="pdf")

@@ -6,11 +6,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 nlp = spacy.load("en_core_web_sm")
-model = SentenceTransformer("all-MiniLM-L6-v2")  # semantic embeddings
+model = SentenceTransformer("all-MiniLM-L6-v2") 
 
-
-
-## Extracting text from both resume and job description pdf
 
 def extract_text_from_pdf(pdf_file):
     try:
@@ -22,7 +19,7 @@ def extract_text_from_pdf(pdf_file):
 
 def preprocess(text):
     text = text.lower()
-    text = re.sub(r'\s+', ' ', text)  # Remove extra spaces/newlines
+    text = re.sub(r'\s+', ' ', text)  
     doc = nlp(text)
     tokens = [token.lemma_ for token in doc if token.is_alpha and not token.is_stop]
     return " ".join(tokens)
@@ -54,7 +51,7 @@ def get_similarity(text1, text2):
 
 
 def rate_resume_against_jd(resume_file, jd_file):
-    # Extract and preprocess
+   
     resume_text = extract_text_from_pdf(resume_file)
     jd_text = extract_text_from_pdf(jd_file)
 
@@ -64,10 +61,10 @@ def rate_resume_against_jd(resume_file, jd_file):
     resume_clean = preprocess(resume_text)
     jd_clean = preprocess(jd_text)
 
-    # Get full-text similarity
+    
     base_score = get_similarity(jd_clean, resume_clean)
 
-    # Extract sections
+    
     sections = extract_sections(resume_text)
     weights = {"skills": 0.4, "experience": 0.3, "education": 0.2}
     boost = 0
